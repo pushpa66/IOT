@@ -102,6 +102,9 @@ def popupWindow(event):
     global data, current_ids, current_ports, available_ids, available_ports
 
     child = Tk()
+    child.resizable(height=False, width=False )
+    child.title('Add Sensor Panel')
+    # child.iconbitmap('R2D2.ico')
     x = 0
     #------------------------------------------------
     label_type = Label(child, text="Sensor Type:")
@@ -258,8 +261,9 @@ def editPorts(root):
 
 root = Tk()
 
+root.resizable(height=False, width=False )
 root.title('Terminal Config')
-root.iconbitmap('R2D2.ico')
+# root.iconbitmap('R2D2.ico')
 
 image = Image.open("Header.png")
 image = image.resize((500, 60), Image.ANTIALIAS)
