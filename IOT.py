@@ -1,7 +1,9 @@
 from Tkinter import *
 from PIL import Image, ImageTk
 import json
+import tkMessageBox
 
+print('GUI APPLICATION MANAGER')
 #-------------------FOR CHILD-----------------------------
 variable_calibrate = ""
 om_variable_type = ''
@@ -27,6 +29,10 @@ val_API_Key = ""
 val_Port = ""
 val_Terminal_ID = ""
 
+
+val_auto = ""
+val_interval = ""
+
 #-----------Update the json file------------
 def update():
     jsonFile = open("Settings.json", "w+")
@@ -50,6 +56,14 @@ def startUp():
     port.insert(0, data['settings']['port'])
     terminal_ID.delete(0, END)
     terminal_ID.insert(0, data['terminal']['id'])
+
+    if(data['settings']['auto'] == '1'):
+        auto.set("true")
+    else:
+        auto.set("false")
+
+    uploading_interval.delete(0, END)
+    uploading_interval.insert(END, data['settings']['interval'])
 #-----------Setup available ports and ids---
 def createOption(child):
     global variable_calibrate, om_variable_type, om_variable_id, om_variable_port
@@ -82,9 +96,9 @@ def setup():
     global data, current_ids, current_ports, available_ids, available_ports
 
     current_ids = []
-    available_ids =[]
+    available_ids = []
     current_ports = []
-    available_ports =[]
+    available_ports = []
 
     for i in data['sensors']:
         current_ids.append(i['id'])
@@ -102,6 +116,7 @@ def popupWindow(event):
     global data, current_ids, current_ports, available_ids, available_ports
 
     child = Tk()
+    child.lift()
     child.resizable(height=False, width=False )
     child.title('Add Sensor Panel')
     # child.iconbitmap('R2D2.ico')
@@ -130,33 +145,42 @@ def popupWindow(event):
 def submit(event):
     global data, listbox
     sensor = {}
-    sensor['calib'] = variable_calibrate.get()
-    x = om_variable_type.get()
-    id = om_variable_id.get()
-    port = om_variable_port.get()
-
-    if(x == 'Temperature'):
-        x = 'TEMP'
-    elif(x == 'Salinity'):
-        x = 'SALI'
-    elif(x == 'Light'):
-        x = 'LIGH'
-    elif(x == 'Wind'):
-        x = 'WIND'
-
-    sensor['type'] = x
-    sensor['id'] = id
-    sensor['port'] = port
-    data['sensors'].append(sensor)
-
-    update()
-    startUp()
-    updateCurrentSensors()
 
     parentName = event.widget.winfo_parent()
     parent = event.widget._nametowidget(parentName)
-    setup()
-    createOption(parent)
+
+    try:
+        cali = variable_calibrate.get()
+        cali = int(cali)
+        sensor['calib'] = str(cali)
+        x = om_variable_type.get()
+        id = om_variable_id.get()
+        port = om_variable_port.get()
+
+        if(x == 'Temperature'):
+            x = 'TEMP'
+        elif(x == 'Salinity'):
+            x = 'SALI'
+        elif(x == 'Light'):
+            x = 'LIGH'
+        elif(x == 'Wind'):
+            x = 'WIND'
+
+        sensor['type'] = x
+        sensor['id'] = id
+        sensor['port'] = port
+        data['sensors'].append(sensor)
+
+        update()
+        startUp()
+        updateCurrentSensors()
+        setup()
+        createOption(parent)
+        tkMessageBox.showinfo("Successful", "Successfully Updated..")
+        parent.lift()
+    except:
+        tkMessageBox.showinfo("Error", "Calibrate Value must be a number..")
+        parent.lift()
 #-----------Update the current sensor panel--
 def updateCurrentSensors():
     global listbox
@@ -189,9 +213,27 @@ def updateData(event):
     update()
     startUp()
 #--------------------Show data of selected sensor------------
+def submitData(event):
+
+    try:
+        val_auto = auto.get()
+        val_interval = int(uploading_interval.get())
+
+        if(val_auto == "true"):
+            val_auto = "1"
+        else:
+            val_auto = "0"
+
+        data['settings']['auto'] = val_auto
+        data['settings']['interval'] = str(val_interval)
+        update()
+        startUp()
+        tkMessageBox.showinfo("Successful", "Successfully Submitted..")
+    except:
+        tkMessageBox.showinfo("Error", "Uploading Interval must be a number..")
+
 def showMyDetails(event):
     global listbox, data, selected_id, varBackUp
-
     widget = event.widget
     selection = widget.curselection()
     value = widget.get(selection[0])
@@ -215,31 +257,40 @@ def showMyDetails(event):
 #------------------------------------------------------------
 def modifySelected(event):
     global selected_id, data, var
+    try:
+        cali = int(calibrate.get())
+        if(selected_id != "None"):
+            for i in data['sensors']:
+                if(i['id'] == selected_id):
+                    new_port = var.get()
+                    i['port'] = new_port
+                    i['calib'] = str(cali)
 
-    if(selected_id != "None"):
-        for i in data['sensors']:
-            if(i['id'] == selected_id):
-                new_port = var.get()
-                i['port'] = new_port
-                cali = calibrate.get()
-                i['calib'] = cali
+            update()
+            updateCurrentSensors()
+            autoReset()
+        selected_id = 'None'
+        tkMessageBox.showinfo("Successful", "Successfully Modified..")
+    except:
+        tkMessageBox.showinfo("Error", "Check the Calibrate Value again..")
 
-        update()
-        updateCurrentSensors()
-        autoReset()
-    selected_id = 'None'
 #------------------------------------------------------------
 def removeSelected(event):
     global selected_id, data
 
-    if(selected_id != "None"):
-        for i in data['sensors']:
-            if(i['id'] == selected_id):
-                del data['sensors'][data['sensors'].index(i)]
-        update()
-        updateCurrentSensors()
-        autoReset()
-    selected_id = 'None'
+    try:
+        if(selected_id != "None"):
+            for i in data['sensors']:
+                if(i['id'] == selected_id):
+                    del data['sensors'][data['sensors'].index(i)]
+            update()
+            updateCurrentSensors()
+            autoReset()
+        selected_id = 'None'
+        tkMessageBox.showinfo("Successful", "Successfully Removed..")
+    except:
+        tkMessageBox.showinfo("Error", "Unable to remove.Please try again..")
+
 #------------------------------------------------------------
 def autoReset():
     var.set("None")
@@ -257,11 +308,11 @@ def editPorts(root):
         var.set(varBackUp)
     option_1 = OptionMenu(root, var, "None", *available_ports)
     option_1.config(width=14)
-    option_1.grid(row=9, column=3)
+    option_1.grid(row=12, column=3)
 
 root = Tk()
 
-root.resizable(height=False, width=False )
+root.resizable(height=False, width=False)
 root.title('Terminal Config')
 # root.iconbitmap('R2D2.ico')
 
@@ -272,6 +323,8 @@ photo = ImageTk.PhotoImage(image)
 label = Label(root, image=photo)
 label.grid(columnspan=4)
 label.grid(rowspan=2)
+#--------------------------------------------------------
+#--------------MQTT Network Settings---------------------
 #--------------------------------------------------------
 label_title = Label(root, text="MQTT Network Settings")
 label_title.grid(row=3, sticky=W)
@@ -295,59 +348,88 @@ label_Port.grid(row=x, column=2, sticky=E)
 label_Terminal_ID.grid(row=x+1, column=2, sticky=E)
 
 port = Entry(root)
-terminal_ID = Entry(root)
-
 port.grid(row=x, column=3)
+
+terminal_ID = Entry(root)
 terminal_ID.grid(row=x+1, column=3)
 #--------------------------------------------------------
 button_update = Button(root, text="Update", width=15)
 button_update.bind("<Button-1>", updateData)
 button_update.grid(row=x+2, column=3)
 #--------------------------------------------------------
-label_title = Label(root, text="Sensor Settings")
+#--------------Data Uploading Settings-------------------
+#--------------------------------------------------------
+y = 7;
+label_title = Label(root, text="Data Uploading Settings")
 label_title.grid(row=7, sticky=W)
+label_title.grid(columnspan=2, sticky=W)
+#--------------------------------------------------------
+label_auto_uploading = Label(root, text="Auto Uploading")
+label_auto_uploading.grid(row=y+1, column=0, sticky=E)
+
+auto = StringVar(root)
+auto.set("true")
+auto_uploading = OptionMenu(root, auto, "true", "false")
+auto_uploading.config(width=14)
+auto_uploading.grid(row=y+1, column=1)
+
+label_uploading_interval = Label(root, text="Uploading Interval")
+label_uploading_interval.grid(row=y+1, column=2, sticky=E)
+
+uploading_interval = Entry(root)
+uploading_interval.grid(row=y+1, column=3)
+
+button_submit = Button(root, text="Submit", width=15)
+button_submit.bind("<Button-1>", submitData)
+button_submit.grid(row=y+2, column=3)
+
+#--------------------------------------------------------
+#--------------Sensor Settings---------------------------
+#--------------------------------------------------------
+t = 10;
+label_title = Label(root, text="Sensor Settings")
+label_title.grid(row=t, sticky=W)
 label_title.grid(columnspan=2, sticky=W)
 
 add_Sensor = Button(root, text="Add Sensor", width=15)
 add_Sensor.bind("<Button-1>",popupWindow)
-add_Sensor.grid(row=8, column=1)
+add_Sensor.grid(row=t+1, column=1)
 #--------------------------------------------------------
-t = 9
 listbox = Listbox(root, height=4,width=1, bg="white")
 scroll = Scrollbar(root, orient=VERTICAL)
 listbox.config(yscrollcommand=scroll.set)
 scroll.config(command=listbox.yview)
 
-listbox.grid(row=t, column=1, rowspan=4, columnspan=1, sticky=N+E+W+S)
+listbox.grid(row=t+2, column=1, rowspan=4, columnspan=1, sticky=N+E+W+S)
 listbox.bind("<Double-Button-1>",showMyDetails)
-listbox.columnconfigure(t,weight=1)
+listbox.columnconfigure(t+2, weight=1)
 
-scroll.grid(row=t, column=1, rowspan=4, sticky=N+E+S)
+scroll.grid(row=t+2, column=1, rowspan=4, sticky=N+E+S)
 
 #--------------------------------------------------------
 label_Digital_Port = Label(root, text="Analog/Digital Port")
-label_Digital_Port.grid(row=9, column=2, sticky=E)
+label_Digital_Port.grid(row=t+2, column=2, sticky=E)
 
 ######################
 #----------->
 ######################
 #---------------------------------------------------------
 label_Calibrate = Label(root, text="Calibrate Value")
-label_Calibrate.grid(row=10, column=2, sticky=E)
+label_Calibrate.grid(row=t+3, column=2, sticky=E)
 calibrate = Entry(root)
-calibrate.grid(row=10, column=3)
+calibrate.grid(row=t+3, column=3)
 calibrate.insert(0, "None")
 #----------------------------------------------------------
 modify_Selected = Button(root, text="Modify Selected", width=15)
 modify_Selected.bind("<Button-1>",modifySelected)
-modify_Selected.grid(row=11, column=2)
+modify_Selected.grid(row=t+4, column=2)
 #----------------------------------------------------------
 remove_Selected = Button(root, text="Remove Selected", width=15)
 remove_Selected.bind("<Button-1>",removeSelected)
-remove_Selected.grid(row=11, column=3)
+remove_Selected.grid(row=t+4, column=3)
 #------------------------------------------------------------------------
-last = Label(root, text="",height=1)
-last.grid(row=13, columnspan=4, sticky=E)
+last = Label(root, text="", height=1)
+last.grid(row=t+6, columnspan=4, sticky=E)
 
 startUp()
 setup()
